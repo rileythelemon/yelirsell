@@ -3,88 +3,185 @@ from tkinter import messagebox
 import json
 import os
 
-
-class IssueReport:
-
-    def __init__(self, name, category, location, description, issue):
-        self.name = name
-        self.category = category
-        self.location = location
-        self.description = description
-        self.issue = issue
-
-    def to_dictionary(self):
-        return {
-            "name": self.name,
-            "category": self.category,
-            "location": self.location,
-            "description": self.description,
-            "issue": self.issue
-        }
+#File used to store reports
+FILE = "reports.json"
 
 
-class SchoolIssueApp:
+#Load reports from the JSON file
+def get_reports():
+    if os.path.exists(FILE):
+        try:
+            with open(FILE, "r") as file:
+                return json.load(file)
+        except:
+            pass
+    return []
 
-    def __init__(self, root):
 
-        #window
-        self.root = root
-        self.root.title("Kaitiaki School Issue Reporter")
-        self.root.geometry("700x600")
+#Save reports to the JSON file
+def save_reports(reports):
+    with open(FILE, "w") as file:
+        json.dump(reports, file, indent=4)
 
-        #file storage
-        self.file_name = "reports.json"
 
-        #heading
-        title_label = ctk.CTkLabel(
-            root,
-            text="Kaitiaki School Issue Reporter",
-            font=("Arial", 31, "bold")
+#Display all reports in the history box
+def load_reports():
+    history.configure(state="normal")
+    history.delete("1.0", "end")
+
+    reports = get_reports()
+    report_count = len(reports)  #Integer variable
+
+    for i, report in enumerate(reports, start=1):
+        history.insert(
+            "end",
+            f"Report #{i}\n"
+            f"Name: {report['name']}\n"
+            f"Issue: {report['issue']}\n"
+            f"{'-' * 50}\n"
         )
-        title_label.pack(pady=10)
 
-        #te reo maori
-        maori_label = ctk.CTkLabel(
-            root,
-            text="Help care for our kura (school).",
-            font=("Arial", 19)
+    history.configure(state="disabled")
+
+
+#Submit a new issue report
+def submit_issue():
+    student = name.get().strip()  #String variable
+    issue = issue_box.get("1.0", "end").strip()
+
+    #Selection (IF statement)
+    if not student or not issue:
+        messagebox.showerror(
+            "Error",
+            "Please complete all fields."
         )
-        maori_label.pack()
+        return
 
-        #name label
-        name_label = ctk.CTkLabel(
-            root,
-            text="Your Name:",
-            font=("Arial", 16)
+    reports = get_reports()
+
+    reports.append({
+        "name": student,
+        "issue": issue
+    })
+
+    save_reports(reports)
+
+    #Clear input boxes
+    name.delete(0, "end")
+    issue_box.delete("1.0", "end")
+
+    messagebox.showinfo(
+        "Success",
+        "Ka pai! Issue submitted successfully."
+    )
+
+    load_reports()
+
+
+#Remove the oldest report
+def resolve_issue():
+    reports = get_reports()
+
+    #Selection (IF statement)
+    if not reports:
+        messagebox.showinfo(
+            "No Reports",
+            "There are no reports to resolve."
         )
-        name_label.pack()
+        return
 
-        #name entry
-        self.name_entry = ctk.CTkEntry(
-            root,
-            placeholder_text="Enter your name here...",
-            width=300
-        )
-        self.name_entry.pack(pady=5)
+    reports.pop(0)
 
-        #issue label
-        issue_label = ctk.CTkLabel(
-            root,
-            text="Describe the Issue:",
-            font=("Arial", 16)
-        )
-        issue_label.pack()
+    save_reports(reports)
 
-        #issue entry
-        self.issue_entry = ctk.CTkEntry(
-            root,
-            placeholder_text="Describe the issue...",
-            width=300
-        )
-        self.issue_entry.pack(pady=5)
+    messagebox.showinfo(
+        "Resolved",
+        "Issue marked as resolved."
+    )
+
+    load_reports()
 
 
-#run app
+
+#Window Setup
+
+ctk.set_appearance_mode("System")
+ctk.set_default_color_theme("blue")
+
 root = ctk.CTk()
-app = SchoolIssueApp(root)
+root.title("Kaitiaki School Issue Reporter")
+root.geometry("740x730")
+
+#Heading
+ctk.CTkLabel(
+    root,
+    text="Kaitiaki School Issue Reporter",
+    font=("Arial", 30, "bold")
+).pack(pady=10)
+
+#Maori message
+ctk.CTkLabel(
+    root,
+    text="Ka pai! Help care for our kura (school).",
+    font=("Arial", 18)
+).pack(pady=5)
+
+#Name input
+ctk.CTkLabel(
+    root,
+    text="Your Name:"
+).pack()
+
+name = ctk.CTkEntry(
+    root,
+    width=300,
+    placeholder_text="Enter your name..."
+)
+name.pack(pady=5)
+
+#Issue input
+ctk.CTkLabel(
+    root,
+    text="Describe the Issue:"
+).pack()
+
+issue_box = ctk.CTkTextbox(
+    root,
+    width=400,
+    height=120
+)
+issue_box.pack(pady=5)
+
+#submit button
+ctk.CTkButton(
+    root,
+    text="Submit Issue",
+    command=submit_issue
+).pack(pady=10)
+
+#History section
+ctk.CTkLabel(
+    root,
+    text="Report History"
+).pack()
+
+history = ctk.CTkTextbox(
+    root,
+    width=600,
+    height=250
+)
+history.pack(pady=10)
+
+history.configure(state="disabled")
+
+#Resolve button
+ctk.CTkButton(
+    root,
+    text="Resolve Oldest Issue",
+    command=resolve_issue
+).pack(pady=10)
+
+#Load saved reports when program starts
+load_reports()
+
 root.mainloop()
